@@ -1,10 +1,12 @@
 {
   "name": "file-size",
   "displayName": "FS++",
-  "description": "",
+  "description": "Show file sizes and folder item counts directly in the VS Code Explorer.",
+  "publisher": "k-e-s-h-a-v",
+  "license": "SEE LICENSE IN LICENSE",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.102.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -12,11 +14,16 @@
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "file-size.helloWorld",
-      "title": "Hello World"
-    }]
   },
+    "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k-e-s-h-a-v/file-size.git"
+  },
+  "bugs": {
+    "url": "https://github.com/k-e-s-h-a-v/file-size/issues"
+  },
+  "homepage": "https://github.com/k-e-s-h-a-v/file-size#readme",
+  "icon": "icons/fs++.png", 
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",

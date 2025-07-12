@@ -1,1 +1,40 @@
-# file-size README
+# File Size & Count VS Code Extension
+
+Displays file sizes and folder item counts directly in the VS Code Explorer.  
+- Shows the number of files/folders and total size for each folder.
+- Ignores common folders like `.git` and `node_modules` for size calculations.
+
+## Example
+
+![view file size on hover](images/folder_hover.png)
+
+## Features
+
+- **File Size:** See the size of each file in the explorer.
+- **Folder Count:** See the number of files and folders inside each directory.
+- **Folder Size:** See the total size of each folder (excluding ignored folders).
+- **Performance:** Ignores hidden and dependency folders for fast calculations.
+
+## Usage
+
+- Open the Explorer view in VS Code.
+- File sizes and folder counts will appear automatically.
+- Hover over badges/labels for more details.
+
+## Known Issues
+
+- Large folders may take time to calculate size.
+- Folder size next to each folder name is not working.
+- Ignores `.git`, `.vscode`, and `node_modules` for size calculations.
+
+## Upcoming Features
+
+- Configurable skip folders (e.g., allow users to specify which folders to ignore).
+
+## Release Notes
+
+See [CHANGELOG.md](./CHANGELOG.md) for details.
+
+## License
+
+[MIT](./LICENSE)

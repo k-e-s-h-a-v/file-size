@@ -1,9 +1,8 @@
-# Change Log
+# Changelog
 
-All notable changes to the "file-size" extension will be documented in this file.
+## 1.0.0
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- Initial release.
+- Show file sizes in explorer.
+- Show folder item counts and total size.
+- Ignores `.git`, `.vscode`, and `node_modules` for size calculations.
