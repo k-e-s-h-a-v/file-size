@@ -24,7 +24,6 @@ function activate(context) {
     );
     console.log('[FileCount] Decoration provider registered.');
 
-
     // The provider itself needs to be disposed of when the extension is deactivated.
     // Pushing it to subscriptions ensures its `dispose` method is called.
     context.subscriptions.push(decorationProvider);
@@ -45,7 +44,8 @@ function deactivate() {
 
 /**
  * Implements the FileDecorationProvider interface to show the number of
- * files and folders within a directory as a badge in the file explorer.
+ * files and folders within a directory as a badge in the file explorer,
+ * and file size for individual files.
  */
 class FolderCountDecorationProvider {
     // A private event emitter that we will use to signal to VS Code that a decoration has changed.
@@ -57,48 +57,76 @@ class FolderCountDecorationProvider {
     watcher;
 
     constructor() {
+        console.log('[FileCount] FolderCountDecorationProvider constructor called.');
         // Create a watcher that listens for changes to any file in the workspace.
+        // The '**/*' pattern watches all files and folders recursively.
         this.watcher = vscode.workspace.createFileSystemWatcher('**/*');
         console.log('[FileCount] File system watcher created.');
 
-        // When a file/folder changes, we need to update the decoration of its parent directory.
+        // When a file/folder changes, we need to update the decoration of its parent directory and itself.
         this.watcher.onDidChange(uri => {
-            console.log(`[FileCount] onDidChange triggered for: ${uri.fsPath}`);
+            console.log(`[FileCount][Watcher] onDidChange triggered for: ${uri.fsPath}`);
             this.refreshDecorations(uri);
         });
         this.watcher.onDidCreate(uri => {
-            console.log(`[FileCount] onDidCreate triggered for: ${uri.fsPath}`);
+            console.log(`[FileCount][Watcher] onDidCreate triggered for: ${uri.fsPath}`);
             this.refreshDecorations(uri);
         });
         this.watcher.onDidDelete(uri => {
-            console.log(`[FileCount] onDidDelete triggered for: ${uri.fsPath}`);
+            console.log(`[FileCount][Watcher] onDidDelete triggered for: ${uri.fsPath}`);
             this.refreshDecorations(uri);
         });
+        console.log('[FileCount] File system watcher event listeners registered.');
     }
 
     /**
      * Cleans up the resources (the watcher and the event emitter) when the extension is deactivated.
      */
     dispose() {
-        console.log('[FileCount] Disposing provider resources.');
+        console.log('[FileCount] Disposing provider resources: watcher and event emitter.');
         this.watcher.dispose();
         this._onDidChangeFileDecorations.dispose();
+        console.log('[FileCount] Provider resources disposed.');
     }
 
     /**
-     * Fires the onDidChangeFileDecorations event for the parent of the changed URI.
-     * This tells VS Code to re-run `provideFileDecoration` for that directory.
+     * Fires the onDidChangeFileDecorations event for the parent of the changed URI and the URI itself.
+     * This tells VS Code to re-run `provideFileDecoration` for that directory and the file.
      * @param {vscode.Uri} uri The URI of the file or folder that changed.
      */
     refreshDecorations(uri) {
-        if (uri) {
-            const parentUri = vscode.Uri.joinPath(uri, '..');
-            console.log(`[FileCount] Refreshing decorations for parent: ${parentUri.fsPath}`);
-            // Fire the event to update the parent directory's decoration
+        if (!uri) {
+            console.log('[FileCount][Refresh] No URI provided for refresh, skipping.');
+            return;
+        }
+
+        console.log(`[FileCount][Refresh] Initiating decoration refresh for: ${uri.fsPath}`);
+
+        // Fire event for the URI itself, in case it's a file whose size changed.
+        this._onDidChangeFileDecorations.fire(uri);
+        console.log(`[FileCount][Refresh] Fired decoration change for URI: ${uri.fsPath}`);
+
+        // Fire event for the parent directory, as its contents (file count) might have changed.
+        const parentUri = vscode.Uri.joinPath(uri, '..');
+        // Avoid refreshing the parent if it's the root of a drive or a special URI
+        // Check if the parent is different from the current URI to prevent infinite loops for root directories
+        if (parentUri.toString() !== uri.toString()) {
             this._onDidChangeFileDecorations.fire(parentUri);
-            // We also need to fire an event for the root to handle top-level changes
-            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-                this._onDidChangeFileDecorations.fire(vscode.workspace.workspaceFolders[0].uri);
+            console.log(`[FileCount][Refresh] Fired decoration change for parent URI: ${parentUri.fsPath}`);
+        } else {
+            console.log(`[FileCount][Refresh] Parent URI is same as current URI (${uri.fsPath}), skipping parent refresh.`);
+        }
+
+        // Also fire an event for the workspace root to ensure overall consistency,
+        // especially for changes at the top level or when adding/removing workspace folders.
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            const workspaceRootUri = vscode.workspace.workspaceFolders[0].uri;
+            // Only fire if the root hasn't already been covered by the current or parent URI refresh
+            if (workspaceRootUri.toString() !== uri.toString() && workspaceRootUri.toString() !== parentUri.toString()) {
+                 this._onDidChangeFileDecorations.fire(workspaceRootUri);
+                 console.log(`[FileCount][Refresh] Fired decoration change for workspace root: ${workspaceRootUri.fsPath}`);
+            } else {
+                console.log(`[FileCount][Refresh] Workspace root already covered by current or parent URI refresh.`);
             }
         }
     }
@@ -111,58 +139,79 @@ class FolderCountDecorationProvider {
      * @returns {Promise<vscode.FileDecoration | undefined>} The decoration object or undefined if no decoration should be shown.
      */
     async provideFileDecoration(uri, token) {
-        // **FIX:** Only process URIs that are part of the file system.
-        // This prevents errors with special URIs like 'walkThrough' or 'untitled'.
-        // 'vscode-remote' is the scheme for WSL.
+        console.log(`[FileCount][Provide] provideFileDecoration called for: ${uri.fsPath}`);
+
+        // Only process URIs that are part of the file system.
+        // 'vscode-remote' is crucial for WSL/remote development.
         if (uri.scheme !== 'file' && uri.scheme !== 'vscode-remote') {
+            console.log(`[FileCount][Provide] Skipping non-file system URI: ${uri.fsPath} (Scheme: ${uri.scheme})`);
             return undefined;
         }
 
-        console.log(`[FileCount] provideFileDecoration called for: ${uri.fsPath}`);
         try {
-            // Check if the operation has been cancelled.
+            // Check if the operation has been cancelled early.
             if (token.isCancellationRequested) {
-                console.log(`[FileCount] Cancellation requested for ${uri.fsPath}`);
+                console.log(`[FileCount][Provide] Cancellation requested for ${uri.fsPath} before stat.`);
                 return undefined;
             }
 
-            // Get file information. We only want to decorate directories.
             const stat = await vscode.workspace.fs.stat(uri);
-            if (stat.type !== vscode.FileType.Directory) {
-                // This is expected for files, so no log is needed unless debugging.
-                return undefined; // Not a directory, so no decoration.
+            console.log(`[FileCount][Provide] Stat for ${uri.fsPath}: type=${stat.type}, size=${stat.size}`);
+
+            if (stat.type === vscode.FileType.Directory) {
+                console.log(`[FileCount][Provide] ${uri.fsPath} is a directory. Counting contents...`);
+
+                const { files, folders } = await this.getDirectoryCounts(uri, token);
+
+                // Check for cancellation again after the async counting operation.
+                if (token.isCancellationRequested) {
+                    console.log(`[FileCount][Provide] Cancellation requested for ${uri.fsPath} after counting directory contents.`);
+                    return undefined;
+                }
+
+                if (files === 0 && folders === 0) {
+                    console.log(`[FileCount][Provide] Directory ${uri.fsPath} is empty, no decoration needed.`);
+                    return undefined;
+                }
+
+                const total = files + folders;
+                const decoration = {
+                    badge: `${total}`, // Badge for folder count
+                    tooltip: `${files} file(s), ${folders} folder(s)`,
+                    color: new vscode.ThemeColor('descriptionForeground')
+                };
+                console.log(`[FileCount][Provide] Providing directory decoration for ${uri.fsPath}: Badge="${decoration.badge}", Tooltip="${decoration.tooltip}"`);
+                return decoration;
+
+            } else if (stat.type === vscode.FileType.File) {
+                console.log(`[FileCount][Provide] ${uri.fsPath} is a file. Getting size...`);
+                const fileSize = stat.size;
+                const formattedSize = this.formatBytes(fileSize);
+
+                const decoration = {
+                    label: ` ${formattedSize}`, // Show file size next to file name (not as a badge)
+                    tooltip: `Size: ${formattedSize}`, // Keep tooltip for full info on hover
+                    color: new vscode.ThemeColor('descriptionForeground') // Optional: color for the label
+                };
+                console.log(`[FileCount][Provide] Providing file decoration for ${uri.fsPath}: Label="${decoration.label}", Tooltip="${decoration.tooltip}"`);
+                return decoration;
+
+            } else {
+                console.log(`[FileCount][Provide] ${uri.fsPath} is neither a file nor a directory (Type: ${stat.type}), no decoration.`);
+                return undefined; // SymbolicLink, Unknown, etc.
             }
-            console.log(`[FileCount] ${uri.fsPath} is a directory.`);
-
-            // It's a directory, so let's count its contents.
-            const { files, folders } = await this.getDirectoryCounts(uri, token);
-
-            // Check for cancellation again after the async counting operation.
-            if (token.isCancellationRequested) {
-                console.log(`[FileCount] Cancellation requested for ${uri.fsPath} after counting.`);
-                return undefined;
-            }
-
-            // Don't show a badge for empty folders to keep the UI clean.
-            if (files === 0 && folders === 0) {
-                console.log(`[FileCount] ${uri.fsPath} is empty, no decoration needed.`);
-                return undefined;
-            }
-
-            const total = files + folders;
-            const decoration = {
-                badge: `${total}`,
-                tooltip: `${files} file(s), ${folders} folder(s)`,
-                color: new vscode.ThemeColor('descriptionForeground')
-            };
-            console.log(`[FileCount] Providing decoration for ${uri.fsPath}:`, decoration);
-            return decoration;
 
         } catch (e) {
-            // Errors are common here (e.g., a file is deleted while being processed).
-            // We'll log them for debugging but won't show an error to the user.
-            console.error(`[FileCount] Error providing decoration for ${uri.fsPath}:`, e);
-            return undefined;
+            // Common errors: file deleted, permission denied, or temporary file system issues.
+            console.error(`[FileCount][Provide] Error providing decoration for ${uri.fsPath}:`, e);
+            // If the error is due to the file not existing, fire a refresh for its parent
+            // to ensure the parent's count gets updated if this file was part of its count.
+            if (e.code === 'ENOENT') { // "No such file or directory"
+                console.log(`[FileCount][Provide] File not found error for ${uri.fsPath}, triggering parent refresh.`);
+                const parentUri = vscode.Uri.joinPath(uri, '..');
+                this._onDidChangeFileDecorations.fire(parentUri);
+            }
+            return undefined; // Do not show any decoration on error.
         }
     }
 
@@ -176,11 +225,13 @@ class FolderCountDecorationProvider {
         let files = 0;
         let folders = 0;
 
+        console.log(`[FileCount][Count] Reading directory: ${dirUri.fsPath}`);
         const entries = await vscode.workspace.fs.readDirectory(dirUri);
-        console.log(`[FileCount] Reading directory ${dirUri.fsPath}, found ${entries.length} entries.`);
+        console.log(`[FileCount][Count] Found ${entries.length} entries in ${dirUri.fsPath}.`);
 
         for (const [name, type] of entries) {
             if (token.isCancellationRequested) {
+                console.log(`[FileCount][Count] Cancellation requested for ${dirUri.fsPath} while counting.`);
                 break;
             }
             if (type === vscode.FileType.File) {
@@ -189,8 +240,29 @@ class FolderCountDecorationProvider {
                 folders++;
             }
         }
-        console.log(`[FileCount] Counts for ${dirUri.fsPath}: ${files} files, ${folders} folders.`);
+        console.log(`[FileCount][Count] Final counts for ${dirUri.fsPath}: ${files} files, ${folders} folders.`);
         return { files, folders };
+    }
+
+    /**
+     * Formats bytes into a human-readable string (B, KB, MB, GB, TB).
+     * @param {number} bytes The size in bytes.
+     * @returns {string} The formatted size string.
+     */
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+
+        const k = 1024;
+        const dm = 1; // One decimal place for better readability
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        let formatted = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
+        if (formatted % 1 === 0) { // If it's a whole number, remove decimal
+            formatted = parseInt(formatted);
+        }
+        return `${formatted} ${sizes[i]}`;
     }
 }
 
