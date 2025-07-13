@@ -11,11 +11,31 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onView:fileExplorerView"
+  ],
   "main": "./extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fileExplorerSidebar",
+          "title": "File Explorer+",
+          "icon": "$(folder-library)"
+        }
+      ]
+    },
+    "views": {
+      "fileExplorerSidebar": [
+        {
+          "id": "fileExplorerView",
+          "name": "File Explorer+",
+          "type": "webview"
+        }
+      ]
+    }
   },
-    "repository": {
+  "repository": {
     "type": "git",
     "url": "git+https://github.com/k-e-s-h-a-v/file-size.git"
   },
@@ -23,7 +43,7 @@
     "url": "https://github.com/k-e-s-h-a-v/file-size/issues"
   },
   "homepage": "https://github.com/k-e-s-h-a-v/file-size#readme",
-  "icon": "icons/fs++.png", 
+  "icon": "icons/fs++.png",
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",

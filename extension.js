@@ -1,20 +1,25 @@
 const vscode = require('vscode');
-const { FolderCountDecorationProvider } = require('./src/folderCountDecorationProvider');
+const { FileExplorerViewProvider } = require('./src/providers/fileExplorerViewProvider');
 
 function activate(context) {
     console.info('[FileCount] Extension activated.');
 
-    const decorationProvider = new FolderCountDecorationProvider();
+    // const decorationProvider = new FolderCountDecorationProvider();
+    // context.subscriptions.push(
+    //     vscode.window.registerFileDecorationProvider(decorationProvider)
+    // );
+    // context.subscriptions.push(decorationProvider);
 
+    // const helloWorldCommand = vscode.commands.registerCommand('file-size.helloWorld', () => {
+    //     vscode.window.showInformationMessage('Hello World from FileCount!');
+    // });
+    // context.subscriptions.push(helloWorldCommand);
+
+    // Register the custom file explorer sidebar view
+    const explorerProvider = new FileExplorerViewProvider(context);
     context.subscriptions.push(
-        vscode.window.registerFileDecorationProvider(decorationProvider)
+        vscode.window.registerWebviewViewProvider('fileExplorerView', explorerProvider)
     );
-    context.subscriptions.push(decorationProvider);
-
-    const helloWorldCommand = vscode.commands.registerCommand('file-size.helloWorld', () => {
-        vscode.window.showInformationMessage('Hello World from FileCount!');
-    });
-    context.subscriptions.push(helloWorldCommand);
 }
 
 function deactivate() {
