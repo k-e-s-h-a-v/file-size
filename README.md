@@ -30,6 +30,7 @@ Displays file sizes and folder item counts directly in the VS Code Explorer.
 ## Upcoming Features
 
 - Configurable skip folders (e.g., allow users to specify which folders to ignore).
+- File size and date modified on activity bar.
 
 ## Release Notes
 
