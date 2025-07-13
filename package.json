@@ -1,5 +1,5 @@
 {
-  "name": "file-size",
+  "name": "file-size-and-count",
   "displayName": "FS++",
   "description": "Show file sizes and folder item counts directly in the VS Code Explorer.",
   "publisher": "k-e-s-h-a-v",
