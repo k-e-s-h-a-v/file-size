@@ -25,13 +25,18 @@ Displays file sizes and folder item counts directly in the VS Code Explorer.
 
 - Large folders may take time to calculate size.
 - Folder size next to each folder name is not working.
-- Ignores `.git`, `.vscode`, and `node_modules` for size calculations.
+- sometimes source control hijacks the badges and tooltip.
 
 ## Upcoming Features
 
 - Configurable skip folders (e.g., allow users to specify which folders to ignore).
 
 ## Release Notes
+
+### 0.1.0
+
+- Improved badge and tooltip text for files and folders.
+- Smarter pluralization and hiding of zero-counts.
 
 See [CHANGELOG.md](./CHANGELOG.md) for details.
 

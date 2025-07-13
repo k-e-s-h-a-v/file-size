@@ -4,7 +4,7 @@
   "description": "Show file sizes and folder item counts directly in the VS Code Explorer.",
   "publisher": "k-e-s-h-a-v",
   "license": "SEE LICENSE IN LICENSE",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.102.0"
   },
