@@ -1,30 +1,19 @@
+// extension.js (at the project root)
 const vscode = require('vscode');
-const { FileExplorerViewProvider } = require('./src/providers/fileExplorerViewProvider');
+const { FileExplorerViewProvider } = require('./src/FileExplorerView'); // Path updated
 
 function activate(context) {
-    console.info('[FileCount] Extension activated.');
+    console.log('Congratulations, your extension "file-explorer-webview" is now active!');
 
-    // const decorationProvider = new FolderCountDecorationProvider();
-    // context.subscriptions.push(
-    //     vscode.window.registerFileDecorationProvider(decorationProvider)
-    // );
-    // context.subscriptions.push(decorationProvider);
+    const fileExplorerProvider = new FileExplorerViewProvider(context);
 
-    // const helloWorldCommand = vscode.commands.registerCommand('file-size.helloWorld', () => {
-    //     vscode.window.showInformationMessage('Hello World from FileCount!');
-    // });
-    // context.subscriptions.push(helloWorldCommand);
-
-    // Register the custom file explorer sidebar view
-    const explorerProvider = new FileExplorerViewProvider(context);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('fileExplorerView', explorerProvider)
+    vscode.window.registerWebviewViewProvider(
+        'fileExplorerView', // This ID must match the view ID in package.json
+        fileExplorerProvider
     );
 }
 
-function deactivate() {
-    console.info('[FileCount] Extension deactivated.');
-}
+function deactivate() {}
 
 module.exports = {
     activate,
